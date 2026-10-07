@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/ShopeeMiniBackEnd/">
+    <Project Path="ShopeeMiniBackEnd/ShopeeMini.API/ShopeeMini.API.csproj" />
+    <Project Path="ShopeeMiniBackEnd/ShopeeMini.Application/ShopeeMini.Application.csproj" />
+    <Project Path="ShopeeMiniBackEnd/ShopeeMini.Domain/ShopeeMini.Domain.csproj" />
+    <Project Path="ShopeeMiniBackEnd/ShopeeMini.Infrastructure/ShopeeMini.Infrastructure.csproj" />
+  </Folder>
+</Solution>

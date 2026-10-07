@@ -1,0 +1,15 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: shopeemini-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: your_password
+      MYSQL_DATABASE: shopee_mini
+    ports:
+      - "3306:3306"
+    volumes:
+      - shopeemini-mysql-data:/var/lib/mysql
+
+volumes:
+  shopeemini-mysql-data:

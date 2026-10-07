@@ -1,0 +1,108 @@
+## .NET / Visual Studio .gitignore
+## Based on https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
+
+# ---------- Build results ----------
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+publish/
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+
+# ---------- User-specific / IDE ----------
+.vs/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.DotSettings.user
+_ReSharper*/
+*.[Rr]e[Ss]harper
+
+# ---------- Test / coverage ----------
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+coverage*.info
+TestResults/
+
+# ---------- Misc build artifacts ----------
+*_i.c
+*_p.c
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*.log
+*.tlog
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+ScaffoldingReadMe.txt
+project.lock.json
+project.fragment.lock.json
+nunit-*.xml
+BenchmarkDotNet.Artifacts/
+
+# ---------- Secrets / local config ----------
+appsettings.*.local.json
+appsettings.Local.json
+*.pfx
+*.p12
+.env
+.env.*
+!.env.example
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ---------- Project-specific ----------
+# Generated invoices (App_Data/invoices/*.json) and other runtime data
+ShopeeMiniBackEnd/ShopeeMini.API/App_Data/
+# Serilog output (Logs/log-.txt)
+Logs/
