@@ -106,3 +106,6 @@ $RECYCLE.BIN/
 ShopeeMiniBackEnd/ShopeeMini.API/App_Data/
 # Serilog output (Logs/log-.txt)
 Logs/
+
+# ---------- TESTING API ----------
+node_modules
