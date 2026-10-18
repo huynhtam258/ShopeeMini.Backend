@@ -37,6 +37,8 @@ Swagger UI: `http://localhost:5080/swagger` (khi `ASPNETCORE_ENVIRONMENT=Develop
 
 Cấu hình nằm ở `ShopeeMiniBackEnd/ShopeeMini.API/appsettings.json`: connection string MySQL, `Jwt` (issuer/audience/signing key/thời hạn token), `Cors:AllowedOrigins`, `RateLimiting`, `InvoiceStorage:Directory`, `Serilog:FilePath`.
 
+Connection string trong `appsettings.json` hiện là giá trị tạm giống dev; `appsettings.Development.json` có bản riêng cho Development. Khi deploy Production, cập nhật giá trị trong `appsettings.json` hoặc ghi đè bằng biến môi trường `ConnectionStrings__Default`.
+
 Tài khoản admin được seed sẵn khi ứng dụng khởi động lần đầu (xem `DbSeeder`):
 - Email: `admin@shopeemini.local`
 - Password: `Admin@123`

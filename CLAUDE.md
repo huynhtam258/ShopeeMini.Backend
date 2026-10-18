@@ -66,6 +66,6 @@ All timestamps are UTC (`DateTime.UtcNow`).
 
 `docs/` holds detailed Vietnamese documentation. Update the relevant file when you change behaviour:
 - `architecture.md`, `api-specification.md` (every endpoint, validation rules and error messages), `database-schema.md`
-- `IDEMPOTENCY.md`, `LOG_LEVELS.md` (Serilog levels are hard-coded in `Program.cs`; the `appsettings` log levels have no effect), `MIGRATIONS.md`, `ACCOUNTS.md` (test accounts)
+- `IDEMPOTENCY.md`, `LOG_LEVELS.md` (Serilog levels are hard-coded in `Program.cs`; the `appsettings` log levels have no effect), `MIGRATIONS.md`, `ACCOUNTS.md` (test accounts), `ENVIRONMENTS.md` (build/run per environment, adding a new one like Staging)
 
 The README still lists Swagger on port 5080; the actual ports are the ones in `launchSettings.json` (5019/7031).

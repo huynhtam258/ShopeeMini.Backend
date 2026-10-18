@@ -391,7 +391,7 @@ File [appsettings.json](../ShopeeMiniBackEnd/ShopeeMini.API/appsettings.json):
 
 | Khóa | Mặc định | Dùng ở |
 |---|---|---|
-| `ConnectionStrings:Default` | `Server=localhost;Port=3306;Database=shopee_mini;User=root;...;TreatTinyAsBoolean=true;` | `AddInfrastructure` (bắt buộc, thiếu thì app không khởi động) |
+| `ConnectionStrings:Default` | `Server=localhost;Port=3306;Database=shopee_mini;User=root;...;TreatTinyAsBoolean=true;` (có ở cả `appsettings.json` và [appsettings.Development.json](../ShopeeMiniBackEnd/ShopeeMini.API/appsettings.Development.json); giá trị trong `appsettings.json` là tạm, giống dev) | `AddInfrastructure` (bắt buộc, thiếu thì app không khởi động) |
 | `Jwt:Issuer` / `Jwt:Audience` | `ShopeeMini` / `ShopeeMiniClient` | Sinh và kiểm tra JWT |
 | `Jwt:SigningKey` | chuỗi Base64 | Khóa HMAC-SHA256 (bắt buộc là Base64 hợp lệ) |
 | `Jwt:AccessTokenMinutes` | 15 | `JwtService` |
@@ -405,7 +405,9 @@ File [appsettings.json](../ShopeeMiniBackEnd/ShopeeMini.API/appsettings.json):
 
 Cổng chạy local (theo [launchSettings.json](../ShopeeMiniBackEnd/ShopeeMini.API/Properties/launchSettings.json)): `http://localhost:5019` và `https://localhost:7031`. Swagger UI ở `/swagger`, chỉ bật khi `ASPNETCORE_ENVIRONMENT=Development`.
 
-> Connection string và `Jwt:SigningKey` đang nằm trong `appsettings.json`. Khi deploy thật nên đưa sang biến môi trường hoặc secret store.
+> Connection string trong `appsettings.json` hiện là giá trị tạm, giống dev. Nếu chạy Production mà không ghi đè, app sẽ kết nối vào MySQL `localhost`. Khi deploy thật, cập nhật giá trị này hoặc ghi đè bằng biến môi trường, ví dụ `ConnectionStrings__Default=Server=...;Port=3306;Database=shopee_mini;User=...;Password=...;TreatTinyAsBoolean=true;`.
+>
+> `Jwt:SigningKey` vẫn đang nằm trong `appsettings.json`. Khi deploy thật nên đưa sang biến môi trường hoặc secret store.
 
 ---
 

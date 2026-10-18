@@ -103,5 +103,5 @@ dotnet ef database drop \
 ## Ghi chú
 
 - Nếu chạy lệnh từ **thư mục gốc repo** thay vì từ `ShopeeMini.API`, thêm `--startup-project ShopeeMiniBackEnd/ShopeeMini.API/ShopeeMini.API.csproj` và sửa đường dẫn `--project` thành `ShopeeMiniBackEnd/ShopeeMini.Infrastructure/ShopeeMini.Infrastructure.csproj` (xem thêm ở [README.md](README.md)).
-- Migration đọc connection string từ `appsettings.json` trong `ShopeeMini.API` (mục `ConnectionStrings:Default`) — đổi connection string ở đó nếu muốn migrate vào DB khác (staging, production...).
+- `dotnet ef` mặc định chạy với môi trường Development nên đọc connection string từ `appsettings.Development.json` trong `ShopeeMini.API` (mục `ConnectionStrings:Default`, giá trị này ghi đè `appsettings.json`). Muốn migrate vào DB khác (staging, production...), đặt biến môi trường `ConnectionStrings__Default` trước khi chạy lệnh, hoặc truyền `--connection "<connection string>"` cho `dotnet ef database update`.
 - Luôn commit file migration (`*.cs` + `*.Designer.cs` + `AppDbContextModelSnapshot.cs`) vào git cùng lúc với thay đổi entity liên quan, để người khác pull code về là có ngay migration tương ứng.
