@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ShopeeMini.Application.Interfaces;
 using ShopeeMini.Domain.Entities;
 
@@ -23,8 +24,32 @@ public class AppDbContext : DbContext, IAppDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasPostgresExtension("citext");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         base.OnModelCreating(modelBuilder);
+    }
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        // Npgsql maps DateTime to 'timestamp with time zone', which only accepts Kind=Utc values.
+        // Query-string filters (fromDate/toDate) bind as Unspecified/Local, so normalize every
+        // DateTime (columns and the parameters compared against them) to UTC.
+        configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
+    }
+
+    private sealed class UtcDateTimeConverter : ValueConverter<DateTime, DateTime>
+    {
+        public UtcDateTimeConverter()
+            : base(v => ToUtc(v), v => DateTime.SpecifyKind(v, DateTimeKind.Utc))
+        {
+        }
+
+        private static DateTime ToUtc(DateTime value) => value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+        };
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

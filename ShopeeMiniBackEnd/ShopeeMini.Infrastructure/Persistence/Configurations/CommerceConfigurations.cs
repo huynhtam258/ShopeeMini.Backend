@@ -95,7 +95,7 @@ public class IdempotencyRecordConfiguration : IEntityTypeConfiguration<Idempoten
         builder.HasKey(r => r.Id);
         builder.Property(r => r.Key).IsRequired().HasMaxLength(128);
         builder.Property(r => r.RequestPath).IsRequired().HasMaxLength(256);
-        builder.Property(r => r.ResponseBody).HasColumnType("longtext");
+        builder.Property(r => r.ResponseBody).HasColumnType("text");
         builder.HasIndex(r => new { r.UserId, r.Key, r.RequestPath }).IsUnique();
     }
 }

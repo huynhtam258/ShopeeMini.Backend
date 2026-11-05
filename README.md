@@ -1,4 +1,4 @@
-# ShopeeMini — Backend (.NET 8 + MySQL)
+# ShopeeMini — Backend (.NET 8 + PostgreSQL)
 
 Backend mini "Shopee" gồm 2 vai trò (Admin shop, User) xây dựng theo Clean Architecture, đã build và test thủ công thành công (xem mục "Đã kiểm thử" bên dưới).
 
@@ -12,16 +12,16 @@ ShopeeMiniBackEnd/
   ShopeeMini.API             # Controllers, Middleware, Filters, Program.cs
 ```
 
-Application chỉ phụ thuộc Domain; Infrastructure implement các interface do Application định nghĩa (Dependency Inversion) — Application **không** biết EF Core hay MySQL cụ thể, chỉ biết `IAppDbContext`.
+Application chỉ phụ thuộc Domain; Infrastructure implement các interface do Application định nghĩa (Dependency Inversion) — Application **không** biết PostgreSQL cụ thể, chỉ biết `IAppDbContext`.
 
 SPU/SKU: `Product` = SPU (shell gom nhóm), `ProductSku` = SKU (biến thể có giá & tồn kho riêng). Discount gắn vào từng SKU, có `StartAt`/`EndAt`, không có giảm giá theo tổng đơn.
 
 ## 2. Cài đặt & chạy
 
-**Yêu cầu:** .NET 8 SDK, Docker (cho MySQL) hoặc MySQL 8 cài sẵn.
+**Yêu cầu:** .NET 8 SDK, Docker (cho PostgreSQL) hoặc PostgreSQL 17 cài sẵn.
 
 ```bash
-# 1. Khởi động MySQL (container "shopeemini-mysql", db "shopee_mini")
+# 1. Khởi động PostgreSQL (container "shopeemini-postgres", db "shopee_mini")
 docker compose up -d
 
 # 2. Áp dụng migration (tạo toàn bộ bảng)
@@ -35,7 +35,7 @@ dotnet run --project ShopeeMiniBackEnd/ShopeeMini.API/ShopeeMini.API.csproj
 
 Swagger UI: `http://localhost:5080/swagger` (khi `ASPNETCORE_ENVIRONMENT=Development`).
 
-Cấu hình nằm ở `ShopeeMiniBackEnd/ShopeeMini.API/appsettings.json`: connection string MySQL, `Jwt` (issuer/audience/signing key/thời hạn token), `Cors:AllowedOrigins`, `RateLimiting`, `InvoiceStorage:Directory`, `Serilog:FilePath`.
+Cấu hình nằm ở `ShopeeMiniBackEnd/ShopeeMini.API/appsettings.json`: connection string PostgreSQL, `Jwt` (issuer/audience/signing key/thời hạn token), `Cors:AllowedOrigins`, `RateLimiting`, `InvoiceStorage:Directory`, `Serilog:FilePath`.
 
 Connection string trong `appsettings.json` hiện là giá trị tạm giống dev; `appsettings.Development.json` có bản riêng cho Development. Khi deploy Production, cập nhật giá trị trong `appsettings.json` hoặc ghi đè bằng biến môi trường `ConnectionStrings__Default`.
 
@@ -88,7 +88,7 @@ Tất cả response đều bọc trong envelope chuẩn:
 
 ## 4. Đã kiểm thử thủ công (xem lịch sử phiên làm việc)
 
-- Build toàn bộ solution thành công, `dotnet ef migrations add` + `database update` chạy được trên MySQL 8 (container Docker), 13 bảng được tạo đúng.
+- Các kiểm thử dưới đây được thực hiện khi dự án còn dùng MySQL 8. Sau khi chuyển sang PostgreSQL, solution build thành công và migration `InitialCreate` đã được sinh lại, nhưng các kịch bản bên dưới cần chạy lại trên PostgreSQL.
 - Đăng ký/đăng nhập admin & user, tạo SPU+2 SKU, publish sản phẩm, tạo giảm giá 20% cho 1 SKU → giá hiển thị đúng (150,000 → 120,000).
 - **Race condition**: 2 user cùng thêm SKU còn tồn kho = 1 vào giỏ, gọi `/checkout` đồng thời → đúng 1 request `201 Paid`, request còn lại `409 Conflict`, tồn kho cuối cùng = 0 (không bị bán vượt).
 - **Idempotency**: gọi lại `/checkout` với cùng `Idempotency-Key` → trả về y hệt response cũ, **không** tạo đơn hàng thứ 2 (tổng số đơn trong DB không đổi). Gọi thiếu header → 400.
@@ -114,8 +114,8 @@ Quy tắc chung áp dụng toàn bộ read-only query trong project: luôn `.AsN
 ### 5.2. Tính năng thể hiện tính ACID
 
 - **Atomicity + Consistency**: `OrderService.CheckoutAsync` — nếu 1 SKU không đủ tồn kho giữa chừng, toàn bộ các lần trừ kho trước đó trong vòng lặp bị `RollbackAsync`, không có SKU nào bị trừ "mồ côi".
-- **Isolation**: MySQL/InnoDB dùng row-lock cho câu `UPDATE ... WHERE StockQuantity >= Quantity` — 2 transaction cùng target 1 row bị tuần tự hoá bởi chính DB engine, không cần lock ở tầng ứng dụng.
-- **Durability**: sau `transaction.CommitAsync()`, dữ liệu đơn hàng/tồn kho đã ghi bền vào InnoDB — vì vậy việc ghi file JSON hóa đơn được cố ý đặt **sau** commit (I/O đĩa không rollback được, không được phép nằm trong transaction quyết định tiền).
+- **Isolation**: PostgreSQL dùng row-lock cho câu `UPDATE ... WHERE StockQuantity >= Quantity` — 2 transaction cùng target 1 row bị tuần tự hoá bởi chính DB engine, không cần lock ở tầng ứng dụng.
+- **Durability**: sau `transaction.CommitAsync()`, dữ liệu đơn hàng/tồn kho đã ghi bền vào PostgreSQL (WAL) — vì vậy việc ghi file JSON hóa đơn được cố ý đặt **sau** commit (I/O đĩa không rollback được, không được phép nằm trong transaction quyết định tiền).
 
 ### 5.3. Transaction là gì? Nơi triển khai
 
@@ -132,7 +132,7 @@ Một transaction thứ hai, nhỏ hơn, cũng được dùng ở `AdminProductS
 
 ### 5.4. Tính năng lưu file JSON kết hợp Database
 
-`IInvoiceJsonWriter` / `InvoiceJsonWriter` (`ShopeeMiniBackEnd/ShopeeMini.Infrastructure/Files/InvoiceJsonWriter.cs`): sau khi transaction checkout commit, hệ thống ghi 1 file `App_Data/invoices/{OrderCode}.json` — bản snapshot bất biến của hóa đơn (không đổi dù sau này admin sửa giá/tên sản phẩm). Đường dẫn file được lưu lại vào cột `Order.InvoiceJsonPath` trong MySQL. => Database là nguồn sự thật (source of truth) để truy vấn/tính toán, file JSON là bản export chỉ-đọc phục vụ audit/hỗ trợ khách hàng, không có ràng buộc transaction với DB (vì disk I/O không rollback được).
+`IInvoiceJsonWriter` / `InvoiceJsonWriter` (`ShopeeMiniBackEnd/ShopeeMini.Infrastructure/Files/InvoiceJsonWriter.cs`): sau khi transaction checkout commit, hệ thống ghi 1 file `App_Data/invoices/{OrderCode}.json` — bản snapshot bất biến của hóa đơn (không đổi dù sau này admin sửa giá/tên sản phẩm). Đường dẫn file được lưu lại vào cột `Order.InvoiceJsonPath` trong PostgreSQL. => Database là nguồn sự thật (source of truth) để truy vấn/tính toán, file JSON là bản export chỉ-đọc phục vụ audit/hỗ trợ khách hàng, không có ràng buộc transaction với DB (vì disk I/O không rollback được).
 
 ### 5.5. Idempotency — nếu không dùng thì sao?
 
@@ -153,17 +153,17 @@ var affectedRows = await _db.ProductSkus
 
 if (affectedRows == 0) { /* hết hàng — rollback toàn bộ transaction */ }
 ```
-Đây là **một câu SQL `UPDATE` duy nhất** — điều kiện `StockQuantity >= Quantity` được kiểm tra và cập nhật trong cùng 1 statement mà MySQL/InnoDB tự khóa row đó cho tới khi statement xong. Request thứ 2 phải đợi request thứ 1 hoàn tất; khi nó chạy, tồn kho đã về 0 nên điều kiện `WHERE` không match → `affectedRows == 0` → hiểu là hết hàng, rollback, trả 409. Đã kiểm thử thực tế bằng 2 curl request đồng thời (mục 4): kết quả đúng 1 thành công, 1 thất bại, tồn kho cuối = 0.
+Đây là **một câu SQL `UPDATE` duy nhất** — điều kiện `StockQuantity >= Quantity` được kiểm tra và cập nhật trong cùng 1 statement mà PostgreSQL tự khóa row đó cho tới khi statement xong. Request thứ 2 phải đợi request thứ 1 hoàn tất; khi nó chạy, tồn kho đã về 0 nên điều kiện `WHERE` không match → `affectedRows == 0` → hiểu là hết hàng, rollback, trả 409. Đã kiểm thử thực tế bằng 2 curl request đồng thời (mục 4): kết quả đúng 1 thành công, 1 thất bại, tồn kho cuối = 0.
 
 ### 5.7. Ưu / nhược điểm hệ thống hiện tại & hướng scale, giảm latency
 
 **Ưu điểm:**
-- Clean Architecture tách rõ Domain/Application/Infrastructure/API → dễ test, dễ thay MySQL bằng DB khác (chỉ đổi Infrastructure).
+- Clean Architecture tách rõ Domain/Application/Infrastructure/API → dễ test, dễ thay PostgreSQL bằng DB khác (chỉ đổi Infrastructure).
 - Toàn bộ I/O dùng async/await, decimal cho tiền tệ, `.AsNoTracking()` cho read-query, validate DTO tập trung qua 1 `ValidationFilter` (không rải rác if/else trong controller).
 - Idempotency + Atomic Update giải quyết đúng 2 rủi ro thực tế nhất của hệ thống thương mại điện tử (double-charge, oversell) mà không cần lock phân tán (Redis/Redlock).
 
 **Nhược điểm / giới hạn hiện tại:**
-- Một MySQL instance duy nhất — vừa là điểm chịu tải chính vừa là SPOF (single point of failure).
+- Một PostgreSQL instance duy nhất — vừa là điểm chịu tải chính vừa là SPOF (single point of failure).
 - `ExecuteUpdateAsync` từng SKU trong 1 vòng lặp `foreach` — checkout giỏ hàng nhiều SKU sẽ mở nhiều round-trip tuần tự tới DB thay vì 1 batch; với giỏ hàng lớn, độ trễ tăng tuyến tính theo số dòng.
 - Danh sách sản phẩm public tính `MIN/MAX` giá + kiểm tra discount bằng subquery lồng trong `Select` — với catalog rất lớn (hàng triệu SKU) sẽ cần bảng tổng hợp giá (materialized) thay vì tính runtime.
 - Chưa có cache (Redis) cho `GET /api/products` — mỗi request đều chạm DB dù dữ liệu catalog thay đổi không thường xuyên.
@@ -172,7 +172,7 @@ if (affectedRows == 0) { /* hết hàng — rollback toàn bộ transaction */ }
 
 **Hướng scale & giảm latency nếu lên production:**
 1. **Đọc nhiều hơn ghi** (catalog, danh sách sản phẩm) → thêm Redis cache theo `productId`/`categoryId`, invalidate khi admin sửa giá/tồn kho/ẩn hiện.
-2. **Tách read/write DB**: MySQL primary (ghi đơn hàng, tồn kho) + read replica cho các API public (`GET /api/products`, `GET /api/products/{id}`).
+2. **Tách read/write DB**: PostgreSQL primary (ghi đơn hàng, tồn kho) + read replica cho các API public (`GET /api/products`, `GET /api/products/{id}`).
 3. **Scale ngang API**: chạy nhiều instance sau load balancer → cần chuyển rate limiter từ in-memory sang Redis-backed (`RedisRateLimiter`/`Microsoft.AspNetCore.RateLimiting` + distributed store), và invoice JSON nên chuyển sang object storage dùng chung (S3/MinIO/Azure Blob) thay vì đĩa cục bộ.
 4. **Hàng nóng (flash-sale 1 SKU, rất nhiều request cùng lúc)**: atomic UPDATE vẫn đúng nhưng tất cả request dồn vào lock 1 row → có thể thêm hàng đợi (RabbitMQ/Kafka) nhận request checkout, xử lý tuần tự theo SKU để tránh nghẽn kết nối DB, trả kết quả bất đồng bộ qua notification.
 5. **Observability**: mỗi request đã có `CorrelationId` (mục 5.8) — khi scale nhiều instance, gom log tập trung (ELK/Seq/Grafana Loki) để trace một request xuyên suốt nhiều service.

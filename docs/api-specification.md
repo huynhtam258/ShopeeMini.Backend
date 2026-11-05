@@ -409,7 +409,7 @@ Danh sách sản phẩm đang public (`IsPublic = true`), có phân trang.
 | Tham số | Kiểu | Mô tả |
 |---|---|---|
 | `categoryId` | long | Lọc đúng danh mục này (không gồm danh mục con) |
-| `search` | string | Tìm theo tên sản phẩm (`LIKE %search%`) |
+| `search` | string | Tìm theo tên sản phẩm, chứa chuỗi, không phân biệt hoa thường (có phân biệt dấu) |
 
 Ví dụ: `GET /api/products?categoryId=1&search=iphone&page=1&pageSize=12`
 
@@ -427,7 +427,7 @@ Ví dụ: `GET /api/products?categoryId=1&search=iphone&page=1&pageSize=12`
 | `hasActiveDiscount` | bool | Có ít nhất 1 SKU đang được giảm giá |
 | `createdAt` | datetime | |
 
-Giá sau giảm ở danh sách được MySQL tính trực tiếp, không làm tròn ở app, nên có thể lệch vài đồng lẻ so với `effectivePrice` ở trang chi tiết.
+Giá sau giảm ở danh sách được PostgreSQL tính trực tiếp, không làm tròn ở app, nên có thể lệch vài đồng lẻ so với `effectivePrice` ở trang chi tiết.
 
 ---
 

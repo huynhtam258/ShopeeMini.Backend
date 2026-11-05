@@ -10,7 +10,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     {
         builder.ToTable("Users");
         builder.HasKey(u => u.Id);
-        builder.Property(u => u.Email).IsRequired().HasMaxLength(256);
+        // citext keeps email lookups and the unique index case-insensitive, matching the old
+        // MySQL *_ci collation behaviour (PostgreSQL text comparison is case-sensitive).
+        // Length (256) is enforced by the validator since citext has no length modifier.
+        builder.Property(u => u.Email).IsRequired().HasColumnType("citext");
         builder.HasIndex(u => u.Email).IsUnique();
         builder.Property(u => u.PasswordHash).IsRequired();
         builder.Property(u => u.FullName).IsRequired().HasMaxLength(200);

@@ -54,12 +54,14 @@ public class AdminProductService : IAdminProductService
     public async Task<PagedResult<ProductListItemDto>> GetMyProductsAsync(long ownerUserId, ProductQuery query, CancellationToken ct = default)
     {
         var now = DateTime.UtcNow;
+        // PostgreSQL LIKE is case-sensitive; lower() on both sides keeps search case-insensitive.
+        var search = query.Search?.ToLower();
         var shop = await GetOrCreateShopAsync(ownerUserId, ct);
 
         var baseQuery = _db.Products.AsNoTracking()
             .Where(p => p.ShopId == shop.Id)
             .Where(p => query.CategoryId == null || p.CategoryId == query.CategoryId)
-            .Where(p => query.Search == null || EF.Functions.Like(p.Name, $"%{query.Search}%"))
+            .Where(p => search == null || p.Name.ToLower().Contains(search))
             .Where(p => query.FromDate == null || p.CreatedAt >= query.FromDate)
             .Where(p => query.ToDate == null || p.CreatedAt <= query.ToDate);
 

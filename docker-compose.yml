@@ -1,15 +1,19 @@
+name: shopeemini
+
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: shopeemini-mysql
+  postgres:
+    image: postgres:17
+    container_name: shopeemini-postgres
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: your_password
-      MYSQL_DATABASE: shopee_mini
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: your_password
+      POSTGRES_DB: shopee_mini
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - shopeemini-mysql-data:/var/lib/mysql
+      - shopeemini-postgres-data:/var/lib/postgresql/data
 
 volumes:
-  shopeemini-mysql-data:
+  shopeemini-postgres-data:
+    name: shopeemini-postgres-data

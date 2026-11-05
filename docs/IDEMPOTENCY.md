@@ -204,7 +204,7 @@ File: [ShopeeMini.Infrastructure/Persistence/Configurations/CommerceConfiguratio
 builder.ToTable("IdempotencyRecords");
 builder.Property(r => r.Key).IsRequired().HasMaxLength(128);
 builder.Property(r => r.RequestPath).IsRequired().HasMaxLength(256);
-builder.Property(r => r.ResponseBody).HasColumnType("longtext");
+builder.Property(r => r.ResponseBody).HasColumnType("text");
 builder.HasIndex(r => new { r.UserId, r.Key, r.RequestPath }).IsUnique();
 ```
 
@@ -466,7 +466,7 @@ Record chỉ khóa theo `(UserId, Key, RequestPath)`. `Checkout` không có body
 Bảng `IdempotencyRecords` chỉ tăng, không giảm. Nên:
 
 - Đặt TTL, ví dụ 24 giờ. Retry thực tế chỉ diễn ra trong vài giây đến vài phút.
-- Thêm background job (`BackgroundService` hoặc MySQL Event) chạy định kỳ:
+- Thêm background job (`BackgroundService` hoặc extension `pg_cron`) chạy định kỳ:
   ```sql
   DELETE FROM IdempotencyRecords WHERE CreatedAt < UTC_TIMESTAMP() - INTERVAL 1 DAY;
   ```
@@ -476,9 +476,9 @@ Bảng `IdempotencyRecords` chỉ tăng, không giảm. Nên:
 
 Đây là **lựa chọn có chủ đích**: lỗi 4xx/5xx không được cache, để user sửa giỏ rồi thử lại. Hệ quả là nếu client retry một request bị `409` (hết hàng) với cùng key, server sẽ chạy lại và **tạo thêm một đơn `Failed`** cùng thông báo. Client nên **không retry khi nhận 4xx** (như ví dụ ở mục 7.3).
 
-### 9.6. Có thể dùng Redis thay cho MySQL không?
+### 9.6. Có thể dùng Redis thay cho PostgreSQL không?
 
-Có, và Redis là lựa chọn phổ biến khi hệ thống lớn: `SET key value NX EX 86400` vừa nguyên tử (giải quyết 9.1) vừa có TTL sẵn (giải quyết 9.4). ShopeeMini hiện chỉ có một MySQL instance, nên dùng bảng DB với unique index là đơn giản và đủ dùng.
+Có, và Redis là lựa chọn phổ biến khi hệ thống lớn: `SET key value NX EX 86400` vừa nguyên tử (giải quyết 9.1) vừa có TTL sẵn (giải quyết 9.4). ShopeeMini hiện chỉ có một PostgreSQL instance, nên dùng bảng DB với unique index là đơn giản và đủ dùng.
 
 ---
 

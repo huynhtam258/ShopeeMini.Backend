@@ -27,15 +27,15 @@ Các file cấu hình hiện có trong `ShopeeMiniBackEnd/ShopeeMini.API/`:
 | File | Nội dung |
 |---|---|
 | `appsettings.json` | Toàn bộ cấu hình: connection string, JWT, CORS, rate limiting, đường dẫn hóa đơn và log |
-| `appsettings.Development.json` | Connection string cho MySQL local (ghi đè giá trị trong `appsettings.json`) |
+| `appsettings.Development.json` | Connection string cho PostgreSQL local (ghi đè giá trị trong `appsettings.json`) |
 | `Properties/launchSettings.json` | 3 profile `http`, `https` và `IIS Express`. Cả 3 đều đặt `ASPNETCORE_ENVIRONMENT=Development` |
 
-> **Lưu ý:** connection string trong `appsettings.json` hiện là **giá trị tạm, giống dev** (`localhost`, user `root`). Nếu chạy Production mà chưa cập nhật hoặc chưa ghi đè bằng biến môi trường, app vẫn khởi động bình thường và kết nối vào MySQL `localhost`.
+> **Lưu ý:** connection string trong `appsettings.json` hiện là **giá trị tạm, giống dev** (`localhost`, user `postgres`). Nếu chạy Production mà chưa cập nhật hoặc chưa ghi đè bằng biến môi trường, app vẫn khởi động bình thường và kết nối vào PostgreSQL `localhost`.
 
 ## 1. Development
 
 ```powershell
-# 1. Bật MySQL (container shopeemini-mysql, database shopee_mini, cổng 3306)
+# 1. Bật PostgreSQL (container shopeemini-postgres, database shopee_mini, cổng 5432)
 docker compose up -d
 
 # 2. Build bản Debug
@@ -67,7 +67,7 @@ Lệnh này build bản Release và gom mọi thứ cần để chạy vào thư
 $env:ASPNETCORE_ENVIRONMENT = "Production"
 $env:ASPNETCORE_URLS = "http://0.0.0.0:8080"
 # Ghi đè connection string nếu chưa sửa appsettings.json (khuyến nghị: đừng lưu mật khẩu thật trong file):
-$env:ConnectionStrings__Default = "Server=<host>;Port=3306;Database=shopee_mini;User=<user>;Password=<pass>;TreatTinyAsBoolean=true;"
+$env:ConnectionStrings__Default = "Host=<host>;Port=5432;Database=shopee_mini;Username=<user>;Password=<pass>"
 
 cd publish
 dotnet ShopeeMini.API.dll
@@ -79,7 +79,7 @@ Trên server Linux:
 cd publish
 ASPNETCORE_ENVIRONMENT=Production \
 ASPNETCORE_URLS=http://0.0.0.0:8080 \
-ConnectionStrings__Default="Server=<host>;Port=3306;Database=shopee_mini;User=<user>;Password=<pass>;TreatTinyAsBoolean=true;" \
+ConnectionStrings__Default="Host=<host>;Port=5432;Database=shopee_mini;Username=<user>;Password=<pass>" \
 dotnet ShopeeMini.API.dll
 ```
 
@@ -111,7 +111,7 @@ Tạo file `ShopeeMiniBackEnd/ShopeeMini.API/appsettings.Staging.json`. File nà
 ```json
 {
   "ConnectionStrings": {
-    "Default": "Server=<staging-host>;Port=3306;Database=shopee_mini_staging;User=<user>;Password=;TreatTinyAsBoolean=true;"
+    "Default": "Host=<staging-host>;Port=5432;Database=shopee_mini_staging;Username=<user>;Password="
   },
   "Cors": {
     "AllowedOrigins": [ "https://staging.<ten-mien-front-end>" ]
@@ -197,7 +197,7 @@ Build giống hệt Production (mục 2.1). Bản publish dùng chung cho mọi 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = "Staging"
 $env:ASPNETCORE_URLS = "http://0.0.0.0:8080"
-$env:ConnectionStrings__Default = "Server=<staging-host>;Port=3306;Database=shopee_mini_staging;User=<user>;Password=<pass>;TreatTinyAsBoolean=true;"
+$env:ConnectionStrings__Default = "Host=<staging-host>;Port=5432;Database=shopee_mini_staging;Username=<user>;Password=<pass>"
 
 cd publish
 dotnet ShopeeMini.API.dll

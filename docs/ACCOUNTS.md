@@ -29,13 +29,13 @@ Các tài khoản này **không có trong code**. Chúng được tạo bằng c
 - **Cần account User để test:** tự đăng ký account mới qua `POST /api/auth/register` với mật khẩu bạn chọn, rồi ghi vào bảng ở mục 3.
 - **Muốn dùng lại account cũ:** copy cột `PasswordHash` của một account đã biết mật khẩu sang account đó (cùng thuật toán BCrypt nên vẫn hợp lệ). Ví dụ, đặt mật khẩu của tất cả account test thành giống một account bạn vừa đăng ký:
   ```sql
-  UPDATE Users
-  SET PasswordHash = (SELECT h FROM (SELECT PasswordHash AS h FROM Users WHERE Email = 'tai-khoan-moi@test.local') t)
-  WHERE Email LIKE '%@test.local';
+  UPDATE "Users"
+  SET "PasswordHash" = (SELECT "PasswordHash" FROM "Users" WHERE "Email" = 'tai-khoan-moi@test.local')
+  WHERE "Email" LIKE '%@test.local';
   ```
 - **Dọn dẹp:** xóa các account test nếu không cần (lưu ý các bảng liên quan như CartItems, Orders, RefreshTokens, Notifications):
   ```sql
-  DELETE FROM Users WHERE Email LIKE '%@test.local';
+  DELETE FROM "Users" WHERE "Email" LIKE '%@test.local';
   ```
 
 ## 3. Tài khoản test có mật khẩu đã biết

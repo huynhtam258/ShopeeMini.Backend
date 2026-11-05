@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-ShopeeMini backend: a mini e-commerce REST API (.NET 8 Web API + MySQL 8 + EF Core Code-First) with two roles, `Admin` (shop owner) and `User` (buyer). The original requirements live in `../ShopeeMiniBackEnd.md`, one level above this repo. The sibling `../front-end/` folder consumes this API. User-facing strings (API messages, exception messages, docs) are written in **Vietnamese**; keep new ones consistent.
+ShopeeMini backend: a mini e-commerce REST API (.NET 8 Web API + PostgreSQL 17 + EF Core Code-First, provider Npgsql) with two roles, `Admin` (shop owner) and `User` (buyer). The original requirements live in `../ShopeeMiniBackEnd.md`, one level above this repo. The sibling `../front-end/` folder consumes this API. User-facing strings (API messages, exception messages, docs) are written in **Vietnamese**; keep new ones consistent.
 
 ## Commands
 
 All commands run from the repo root (`back-end/`). There is no test project and no linter configured.
 
 ```bash
-docker compose up -d                                   # MySQL 8 container "shopeemini-mysql", db "shopee_mini", port 3306
+docker compose up -d                                   # PostgreSQL 17 container "shopeemini-postgres", db "shopee_mini", port 5432
 dotnet build ShopeeMini.slnx                           # .slnx needs a recent SDK (9.0.200+); projects target net8.0
 dotnet run --project ShopeeMiniBackEnd/ShopeeMini.API/ShopeeMini.API.csproj
 # → http://localhost:5019 / https://localhost:7031, Swagger at /swagger (Development only)
@@ -31,8 +31,8 @@ Migrations are also applied automatically at startup: `DbSeeder.SeedAsync` calls
 Clean Architecture in `ShopeeMiniBackEnd/`, with dependencies pointing inward: `API → Application/Infrastructure → Domain`, and `Infrastructure → Application`.
 
 - **Domain**: POCO entities (all inherit `BaseEntity`: `long Id`, UTC `CreatedAt`/`UpdatedAt`) and enums. No EF attributes.
-- **Application**: one folder per feature under `Features/<Feature>/` (`I<X>Service`, `<X>Service`, `Dtos/`, `Validators/`). Services take `userId` as a parameter from the controller and never touch `HttpContext`. They talk to the DB through `IAppDbContext`, which exposes `DbSet<T>` and `Database`, so Application *does* depend on EF Core APIs (`Include`, `AsNoTracking`, `ExecuteUpdateAsync`, transactions) but not on the MySQL provider. There are no repositories.
-- **Infrastructure**: `AppDbContext` (also implements `IAppDbContext`, and stamps `CreatedAt`/`UpdatedAt` in `SaveChangesAsync`), Fluent API configs in `Persistence/Configurations/*.cs` (lengths, precision, indexes, delete behaviour; enums stored as strings), JWT, BCrypt, and the invoice JSON writer.
+- **Application**: one folder per feature under `Features/<Feature>/` (`I<X>Service`, `<X>Service`, `Dtos/`, `Validators/`). Services take `userId` as a parameter from the controller and never touch `HttpContext`. They talk to the DB through `IAppDbContext`, which exposes `DbSet<T>` and `Database`, so Application *does* depend on EF Core APIs (`Include`, `AsNoTracking`, `ExecuteUpdateAsync`, transactions) but not on the PostgreSQL provider (so no `EF.Functions.ILike` there; case-insensitive search uses `ToLower().Contains`). There are no repositories.
+- **Infrastructure**: `AppDbContext` (also implements `IAppDbContext`, stamps `CreatedAt`/`UpdatedAt` in `SaveChangesAsync`, enables the `citext` extension used by `Users.Email`, and converts every `DateTime` to UTC because Npgsql rejects non-UTC values for `timestamptz` columns), Fluent API configs in `Persistence/Configurations/*.cs` (lengths, precision, indexes, delete behaviour; enums stored as strings), JWT, BCrypt, and the invoice JSON writer.
 - **API**: thin controllers inheriting `ApiControllerBase`. Several files hold two controller classes, e.g. `CategoriesController.cs` contains both the public and the `/api/admin/categories` controllers. Authorization uses `[Authorize(Roles = nameof(UserRole.Admin|User))]`.
 
 ### Cross-cutting conventions (spread across several files)

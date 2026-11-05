@@ -26,8 +26,8 @@ ShopeeMini là backend REST API cho một sàn thương mại điện tử thu n
 |---|---|---|
 | Runtime | .NET / ASP.NET Core | 8.0 |
 | ORM | Entity Framework Core | 8.0.10 |
-| Database provider | Pomelo.EntityFrameworkCore.MySql | 8.0.2 |
-| Database | MySQL (Docker image `mysql:8.0`) | 8.0 |
+| Database provider | Npgsql.EntityFrameworkCore.PostgreSQL | 8.0.10 |
+| Database | PostgreSQL (Docker image `postgres:17`) | 17 |
 | Validation | FluentValidation | 11.9.2 |
 | Xác thực | JWT Bearer (`Microsoft.AspNetCore.Authentication.JwtBearer`, `System.IdentityModel.Tokens.Jwt`) | 8.0.x |
 | Hash mật khẩu | BCrypt.Net-Next (Enhanced, work factor 12) | 4.0.3 |
@@ -82,13 +82,13 @@ graph TD
     INFRA --> APP
     INFRA --> DOMAIN
     APP --> DOMAIN
-    INFRA -. "Pomelo MySQL, BCrypt, JWT" .-> EXT[(Thư viện ngoài)]
+    INFRA -. "Npgsql (PostgreSQL), BCrypt, JWT" .-> EXT[(Thư viện ngoài)]
     APP -. "EF Core (DbSet, LINQ async), FluentValidation" .-> EXT
 ```
 
-**Nguyên tắc Dependency Inversion:** Application định nghĩa interface (`IAppDbContext`, `IJwtService`, `IPasswordHasher`, `IInvoiceJsonWriter`...), Infrastructure hiện thực chúng. Application không biết MySQL, BCrypt hay ổ đĩa.
+**Nguyên tắc Dependency Inversion:** Application định nghĩa interface (`IAppDbContext`, `IJwtService`, `IPasswordHasher`, `IInvoiceJsonWriter`...), Infrastructure hiện thực chúng. Application không biết PostgreSQL, BCrypt hay ổ đĩa.
 
-> **Lưu ý:** Application **có** tham chiếu package `Microsoft.EntityFrameworkCore` và `Microsoft.EntityFrameworkCore.Relational`, vì `IAppDbContext` để lộ `DbSet<T>` và `DatabaseFacade`, còn service dùng trực tiếp `Include`, `AsNoTracking`, `ExecuteUpdateAsync`, `EF.Functions.Like`, `BeginTransactionAsync`. Nói cách khác, Application độc lập với **provider** (MySQL), nhưng không độc lập với **EF Core**. Đây là đánh đổi có chủ đích để khỏi phải viết thêm tầng Repository.
+> **Lưu ý:** Application **có** tham chiếu package `Microsoft.EntityFrameworkCore` và `Microsoft.EntityFrameworkCore.Relational`, vì `IAppDbContext` để lộ `DbSet<T>` và `DatabaseFacade`, còn service dùng trực tiếp `Include`, `AsNoTracking`, `ExecuteUpdateAsync`, `BeginTransactionAsync`. Nói cách khác, Application độc lập với **provider** (PostgreSQL), nhưng không độc lập với **EF Core**. Đây là đánh đổi có chủ đích để khỏi phải viết thêm tầng Repository.
 
 ---
 
@@ -137,7 +137,7 @@ Service nhận `userId` từ controller (lấy từ JWT), **không** tự đọc
 | `InvoiceJsonWriter` | `IInvoiceJsonWriter` | Ghi `{InvoiceStorage:Directory}/{OrderCode}.json` |
 | `DbSeeder` | — | Chạy migration, seed admin + shop + 4 danh mục |
 
-`MySqlServerVersion` được cố định là `8.0.36` để EF Core không phải mở kết nối dò phiên bản lúc khởi động (và để `dotnet ef migrations add` chạy được khi không có MySQL).
+`AppDbContext` bật extension `citext` (cho `Users.Email`) và gắn value converter đưa mọi `DateTime` về UTC, vì Npgsql chỉ nhận `DateTime` `Kind=Utc` cho cột `timestamptz`. Chi tiết ở [database-schema.md](database-schema.md).
 
 ### 3.4. API
 
@@ -277,7 +277,7 @@ sequenceDiagram
     participant C as Client
     participant F as IdempotencyFilter
     participant S as OrderService
-    participant DB as MySQL
+    participant DB as PostgreSQL
     participant FS as Disk (App_Data/invoices)
 
     C->>F: POST /api/orders/checkout<br/>Idempotency-Key: K
@@ -313,7 +313,7 @@ sequenceDiagram
 
 Các điểm thiết kế:
 
-- **Chống bán vượt tồn kho (oversell):** mỗi lần trừ kho là **một câu `UPDATE` có điều kiện** (`ExecuteUpdateAsync`). InnoDB khóa dòng trong lúc chạy, nên 2 checkout tranh nhau chiếc cuối cùng sẽ được tuần tự hóa. Request đến sau thấy `StockQuantity < qty`, `UPDATE` ảnh hưởng 0 dòng, và cả transaction bị rollback.
+- **Chống bán vượt tồn kho (oversell):** mỗi lần trừ kho là **một câu `UPDATE` có điều kiện** (`ExecuteUpdateAsync`). PostgreSQL khóa dòng tới khi transaction kết thúc, nên 2 checkout tranh nhau chiếc cuối cùng sẽ được tuần tự hóa. Request đến sau thấy `StockQuantity < qty`, `UPDATE` ảnh hưởng 0 dòng, và cả transaction bị rollback.
 - **Atomicity:** hết hàng ở bất kỳ SKU nào thì mọi lần trừ kho trước đó trong vòng lặp đều được rollback.
 - **Đơn thất bại vẫn được lưu:** sau rollback, hệ thống ghi một `Order` trạng thái `Failed` (`TotalAmount = 0`, `LineTotal = 0`) cùng thông báo cho user. Giỏ hàng **giữ nguyên** để user sửa lại.
 - **Giá:** tính tại thời điểm checkout bằng `DiscountCalculator` (không dùng giá cache ở giỏ). `LineTotal = round(Price × (1 − %/100), 2) × Quantity`.
@@ -339,7 +339,7 @@ Sản phẩm mới tạo luôn có `IsPublic = false`; admin phải bật hiển
 | Nơi tính | Cách tính | Làm tròn |
 |---|---|---|
 | Chi tiết sản phẩm, giỏ hàng, response SKU của admin, checkout | `DiscountCalculator` trong bộ nhớ | 2 chữ số, `AwayFromZero` |
-| Danh sách sản phẩm (public và admin) | Biểu thức LINQ dịch sang SQL (`MIN`/`MAX` + subquery `MAX(DiscountPercent)`) | Do MySQL tính, không làm tròn ở app |
+| Danh sách sản phẩm (public và admin) | Biểu thức LINQ dịch sang SQL (`MIN`/`MAX` + subquery `MAX(DiscountPercent)`) | Do PostgreSQL tính, không làm tròn ở app |
 
 Nếu một SKU có nhiều khuyến mãi chồng thời gian, hệ thống lấy **% lớn nhất** (không cộng dồn).
 
@@ -391,7 +391,7 @@ File [appsettings.json](../ShopeeMiniBackEnd/ShopeeMini.API/appsettings.json):
 
 | Khóa | Mặc định | Dùng ở |
 |---|---|---|
-| `ConnectionStrings:Default` | `Server=localhost;Port=3306;Database=shopee_mini;User=root;...;TreatTinyAsBoolean=true;` (có ở cả `appsettings.json` và [appsettings.Development.json](../ShopeeMiniBackEnd/ShopeeMini.API/appsettings.Development.json); giá trị trong `appsettings.json` là tạm, giống dev) | `AddInfrastructure` (bắt buộc, thiếu thì app không khởi động) |
+| `ConnectionStrings:Default` | `Host=localhost;Port=5432;Database=shopee_mini;Username=postgres;...` (có ở cả `appsettings.json` và [appsettings.Development.json](../ShopeeMiniBackEnd/ShopeeMini.API/appsettings.Development.json); giá trị trong `appsettings.json` là tạm, giống dev) | `AddInfrastructure` (bắt buộc, thiếu thì app không khởi động) |
 | `Jwt:Issuer` / `Jwt:Audience` | `ShopeeMini` / `ShopeeMiniClient` | Sinh và kiểm tra JWT |
 | `Jwt:SigningKey` | chuỗi Base64 | Khóa HMAC-SHA256 (bắt buộc là Base64 hợp lệ) |
 | `Jwt:AccessTokenMinutes` | 15 | `JwtService` |
@@ -405,7 +405,7 @@ File [appsettings.json](../ShopeeMiniBackEnd/ShopeeMini.API/appsettings.json):
 
 Cổng chạy local (theo [launchSettings.json](../ShopeeMiniBackEnd/ShopeeMini.API/Properties/launchSettings.json)): `http://localhost:5019` và `https://localhost:7031`. Swagger UI ở `/swagger`, chỉ bật khi `ASPNETCORE_ENVIRONMENT=Development`.
 
-> Connection string trong `appsettings.json` hiện là giá trị tạm, giống dev. Nếu chạy Production mà không ghi đè, app sẽ kết nối vào MySQL `localhost`. Khi deploy thật, cập nhật giá trị này hoặc ghi đè bằng biến môi trường, ví dụ `ConnectionStrings__Default=Server=...;Port=3306;Database=shopee_mini;User=...;Password=...;TreatTinyAsBoolean=true;`.
+> Connection string trong `appsettings.json` hiện là giá trị tạm, giống dev. Nếu chạy Production mà không ghi đè, app sẽ kết nối vào PostgreSQL `localhost`. Khi deploy thật, cập nhật giá trị này hoặc ghi đè bằng biến môi trường, ví dụ `ConnectionStrings__Default=Host=...;Port=5432;Database=shopee_mini;Username=...;Password=...`.
 >
 > `Jwt:SigningKey` vẫn đang nằm trong `appsettings.json`. Khi deploy thật nên đưa sang biến môi trường hoặc secret store.
 
@@ -419,7 +419,7 @@ Trước khi nhận request, `Program.cs` tạo một scope và gọi [DbSeeder.
 2. Nếu chưa có user nào role `Admin`: tạo `admin@shopeemini.local` / `Admin@123` và shop `ShopeeMini Official Store`.
 3. Nếu bảng `Categories` trống: tạo 4 danh mục gốc.
 
-Hạ tầng local: [docker-compose.yml](../docker-compose.yml) chạy container `shopeemini-mysql` (MySQL 8.0, database `shopee_mini`, cổng 3306, volume `shopeemini-mysql-data`).
+Hạ tầng local: [docker-compose.yml](../docker-compose.yml) chạy container `shopeemini-postgres` (PostgreSQL 17, database `shopee_mini`, cổng 5432, volume `shopeemini-postgres-data`).
 
 ---
 

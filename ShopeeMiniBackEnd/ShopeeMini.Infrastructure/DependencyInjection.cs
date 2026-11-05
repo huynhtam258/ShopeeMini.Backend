@@ -16,13 +16,8 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("Missing 'ConnectionStrings:Default' configuration.");
 
-        // A fixed ServerVersion avoids EF Core opening a connection just to probe the server
-        // version at startup (which would also break `dotnet ef migrations add` when no live
-        // MySQL instance is reachable). Bump this if you target a different MySQL release.
-        var serverVersion = new MySqlServerVersion(new Version(8, 0, 36));
-
         services.AddDbContext<AppDbContext>(options =>
-            options.UseMySql(connectionString, serverVersion));
+            options.UseNpgsql(connectionString));
 
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 

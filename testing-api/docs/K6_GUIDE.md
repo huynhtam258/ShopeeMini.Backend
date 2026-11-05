@@ -78,7 +78,7 @@ npm install
 
 > ⚠️ **Bước này quan trọng nhất.** Nếu bỏ qua, kết quả test sẽ không có giá trị.
 
-### 3.1. Bật MySQL
+### 3.1. Bật PostgreSQL
 
 Mở Docker Desktop trước, sau đó chạy ở thư mục `back-end/`:
 
@@ -120,7 +120,7 @@ Phản hồi phải có `"success":true`.
 ### 3.4. Lời khuyên để kết quả chính xác hơn
 
 - **Thu nhỏ cửa sổ console của API** khi đang test. Serilog ghi một dòng log ra console cho mỗi request, và console trên Windows ghi rất chậm, có thể làm request bị chậm thêm vài giây khi tải cao.
-- Nếu có thể, **chạy k6 trên một máy khác** với máy chạy API và MySQL. Khi chạy chung một máy, k6 tranh CPU với API nên kết quả sẽ thấp hơn thực tế.
+- Nếu có thể, **chạy k6 trên một máy khác** với máy chạy API và PostgreSQL. Khi chạy chung một máy, k6 tranh CPU với API nên kết quả sẽ thấp hơn thực tế.
 - DB càng có nhiều dữ liệu thì kết quả càng sát thực tế. Với DB gần như trống, query nào cũng nhanh.
 
 ---
@@ -192,7 +192,7 @@ Smoke test phải có `http_req_failed` gần **0%** thì mới chạy test đ�
 3. `POST /api/orders/checkout` kèm header `Idempotency-Key` mới cho mỗi lần thanh toán. Endpoint này bắt buộc có header đó.
 4. Nghỉ 1 giây.
 
-Mọi VU đều mua **cùng một SKU**. Đây là kịch bản **flash sale**, nặng nhất với cơ chế trừ kho: các transaction phải xếp hàng chờ khoá dòng SKU đó trong MySQL.
+Mọi VU đều mua **cùng một SKU**. Đây là kịch bản **flash sale**, nặng nhất với cơ chế trừ kho: các transaction phải xếp hàng chờ khoá dòng SKU đó trong PostgreSQL.
 
 ### 5.3. Số user ảo tăng dần (`stages`)
 
@@ -305,13 +305,13 @@ dotnet-counters monitor -n ShopeeMini.API
 | `ThreadPool Queue Length` | Tăng liên tục: request phải xếp hàng, thường do đang chờ connection DB |
 | `GC Heap Size` | Tăng mãi không giảm khi chạy lâu: có thể bị rò rỉ bộ nhớ |
 
-### 7.2. MySQL
+### 7.2. PostgreSQL
 
 ```powershell
-docker stats shopeemini-mysql
+docker stats shopeemini-postgres
 ```
 
-Nếu CPU của MySQL cao trong khi API còn rảnh, điểm nghẽn nằm ở query: thiếu index, hoặc lọc và sắp xếp trên bảng lớn.
+Nếu CPU của PostgreSQL cao trong khi API còn rảnh, điểm nghẽn nằm ở query: thiếu index, hoặc lọc và sắp xếp trên bảng lớn.
 
 ### 7.3. Đếm mã phản hồi trong log API
 
@@ -398,7 +398,7 @@ Mỗi lần chạy `checkout.js` sẽ tạo thêm:
 Cách đơn giản nhất là **xoá toàn bộ DB dev và tạo lại**:
 
 ```powershell
-# ⚠️ XOÁ TOÀN BỘ DỮ LIỆU trong MySQL container, chỉ dùng cho môi trường dev
+# ⚠️ XOÁ TOÀN BỘ DỮ LIỆU trong PostgreSQL container, chỉ dùng cho môi trường dev
 docker compose down -v
 docker compose up -d
 ```

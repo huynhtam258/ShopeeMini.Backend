@@ -15,13 +15,15 @@ public class PublicCatalogService : IPublicCatalogService
     public async Task<PagedResult<ProductListItemDto>> GetProductsAsync(ProductQuery query, CancellationToken ct = default)
     {
         var now = DateTime.UtcNow;
+        // PostgreSQL LIKE is case-sensitive; lower() on both sides keeps search case-insensitive.
+        var search = query.Search?.ToLower();
 
         // Read-only listing query: AsNoTracking + server-side projection (only the columns the
         // list view needs travel over the wire) + pagination pushed down to SQL via Skip/Take.
         var baseQuery = _db.Products.AsNoTracking()
             .Where(p => p.IsPublic)
             .Where(p => query.CategoryId == null || p.CategoryId == query.CategoryId)
-            .Where(p => query.Search == null || EF.Functions.Like(p.Name, $"%{query.Search}%"))
+            .Where(p => search == null || p.Name.ToLower().Contains(search))
             .Where(p => query.FromDate == null || p.CreatedAt >= query.FromDate)
             .Where(p => query.ToDate == null || p.CreatedAt <= query.ToDate);
 

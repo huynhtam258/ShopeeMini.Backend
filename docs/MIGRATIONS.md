@@ -13,7 +13,7 @@ dotnet tool install --global dotnet-ef
 dotnet tool update --global dotnet-ef
 ```
 
-Đảm bảo MySQL đang chạy (container `shopeemini-mysql`):
+Đảm bảo PostgreSQL đang chạy (container `shopeemini-postgres`):
 ```bash
 docker compose up -d   # chạy ở thư mục gốc repo, nơi có docker-compose.yml
 ```
